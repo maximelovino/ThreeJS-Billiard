@@ -1,3 +1,6 @@
+const THREE = require('threejs-full-es6')
+
+
 let camera;
 let scene;
 let renderer;
@@ -9,16 +12,17 @@ window.addEventListener('load', () => {
 });
 
 function Position(x, y) {
-    return {x, y}
+    return { x, y }
 }
 
 
 function initLights() {
-    const ambientLight = new THREE.AmbientLight(0xFFFFFF,10);
+    const ambientLight = new THREE.AmbientLight(0xFFFFFF, 10);
     scene.add(ambientLight);
 }
 
 function init() {
+    console.log("Shit wadup dude!");
     scene = new THREE.Scene();
     materialLoader = new THREE.MTLLoader();
 
@@ -28,7 +32,7 @@ function init() {
     initLights();
 }
 
-function loadTable(){
+function loadTable() {
     materialLoader.setPath('objs/');
     materialLoader.load('pool_table.mtl', (materials) => {
         materials.preload();
@@ -52,11 +56,11 @@ function loadTable(){
 function initCam() {
     camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 10);
     camera.position.z = 1;
-    let controls = new THREE.OrbitControls(camera);
+    const controls = new THREE.OrbitControls(camera);
 }
 
 function createRenderer() {
-    renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 }

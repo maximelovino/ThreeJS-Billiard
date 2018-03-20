@@ -1,3 +1,6 @@
 .cache/
 .idea/
 *.iml
+node_modules/
+dist/
+package-lock.json

@@ -1,0 +1,29 @@
+{
+  "name": "threejs-billiard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "start": "npm run watch & http-server",
+    "watch": "webpack --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maximelovino/ThreeJS-Billiard.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/maximelovino/ThreeJS-Billiard/issues"
+  },
+  "homepage": "https://github.com/maximelovino/ThreeJS-Billiard#readme",
+  "dependencies": {
+    "http-server": "^0.11.1",
+    "physijs-webpack": "0.0.2",
+    "threejs-full-es6": "^5.0.3",
+    "webpack": "^3.11.0"
+  }
+}
