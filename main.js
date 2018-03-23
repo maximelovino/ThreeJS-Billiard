@@ -3,6 +3,10 @@ let scene;
 let renderer;
 let materialLoader;
 let orbitcont;
+let whiteBall;
+let whiteBallX = -0.75;
+let otherBalls = [];
+const prod = false;
 
 window.addEventListener('load', () => {
     Physijs.scripts.worker = 'lib/physijs_worker.js';
@@ -30,8 +34,23 @@ function init() {
     initCam();
     createRenderer();
     loadTable();
-    for (let i = 0; i < 16; i++) {
-        createBall(-1 + 0.1 * i, 0, i)
+
+    whiteBall = createBall(whiteBallX, 0, 0);
+    window.addEventListener("keyup", event => {
+        if (event.keyCode == 32) {
+            event.preventDefault();
+            console.log("SPACEBAR");
+            whiteBall.applyCentralImpulse(new THREE.Vector3(0.0001, 0, 0))
+        }
+    });
+    let ballNumber = 1
+    for (let i = 0; i < 5; i++) {
+        for (let j = 0; j < 5; j++) {
+            if (j <= i) {
+                otherBalls.push(createBall(0.5 + i * 0.05, j * 0.05 - i * 0.05 / 2, ballNumber));
+                ballNumber++;
+            }
+        }
     }
     initLights();
 }
@@ -53,13 +72,19 @@ function loadTable() {
             scene.add(object);
         })
     });
-    const width = 2.4;
+    const width = 2.25;
     const height = 0.1;
     const depth = 1.2;
     const bounciness = 0.5
+    const friction = 0.5
     const tableBase = new Physijs.BoxMesh(
         new THREE.BoxGeometry(width, height, depth),
-        Physijs.createMaterial(new THREE.MeshBasicMaterial({ color: 0x005500, side: THREE.DoubleSide, transparent: true, opacity: 0 }), 0, bounciness),
+        Physijs.createMaterial(new THREE.MeshBasicMaterial({
+            color: 0x005500,
+            side: THREE.DoubleSide,
+            transparent: prod,
+            opacity: 0
+        }), friction, 0),
         0
     );
     tableBase.position.set(0, 0.90, 0);
@@ -68,13 +93,13 @@ function loadTable() {
     for (let i = -1; i <= 1; i += 2) {
         for (let j = -1; j <= 1; j += 2) {
             let border = new Physijs.BoxMesh(
-                new THREE.BoxGeometry(width / 2 - width / 12, height, height),
+                new THREE.BoxGeometry(width / 2 - width / 12, 0.3, height),
                 Physijs.createMaterial(new THREE.MeshBasicMaterial({
                     color: 0x002200,
                     side: THREE.DoubleSide,
-                    transparent: true,
+                    transparent: prod,
                     opacity: 0
-                }), 0, bounciness),
+                }), friction * 2, bounciness),
                 0
             );
 
@@ -85,16 +110,16 @@ function loadTable() {
 
     for (let i = -1; i <= 1; i += 2) {
         let border = new Physijs.BoxMesh(
-            new THREE.BoxGeometry(height, height, width / 2 - width / 11),
+            new THREE.BoxGeometry(height, 0.3, width / 2 - width / 11),
             Physijs.createMaterial(new THREE.MeshBasicMaterial({
                 color: 0x002200,
                 side: THREE.DoubleSide,
-                transparent: true,
+                transparent: prod,
                 opacity: 0
-            }), 0, bounciness),
+            }), friction, bounciness),
             0
         );
-        border.position.set(i * width / 2 + (i == -1 ? 0.04 : -0.04), 0.95, 0);
+        border.position.set(i * width / 2 + (i == -1 ? -0.04 : 0.04), 0.95, 0);
         scene.add(border);
     }
 }
@@ -143,7 +168,7 @@ function createBall(x, z, number) {
     let height = 32;
     let ball = new Physijs.SphereMesh(
         new THREE.SphereGeometry(radius, width, height),
-        Physijs.createMaterial(new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide }), 0, 1),
+        Physijs.createMaterial(new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide }), 0.5, 1),
     );
     ball.position.set(x, 1, z);
     scene.add(ball);
@@ -167,7 +192,16 @@ function createRenderer() {
 function renderFrame() {
 
     requestAnimationFrame(renderFrame);
-
+    if (whiteBall.position.y < 0.9) {
+        scene.remove(whiteBall);
+        whiteBall = createBall(whiteBallX, 0, 0);
+    }
+    otherBalls.forEach(b => {
+        if (b.position.y < 0.9 && !b.removed) {
+            b.removed = true;
+            scene.remove(b);
+        }
+    });
     orbitcont.update();
     scene.simulate();
     renderer.render(scene, camera);
