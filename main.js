@@ -6,7 +6,7 @@ let orbitcont;
 let whiteBall;
 let whiteBallX = -0.75;
 let otherBalls = [];
-let cueStick;
+let stick;
 const prod = true;
 
 window.addEventListener('load', () => {
@@ -23,7 +23,8 @@ function Position(x, y) {
 
 function initLights() {
     const spotlight = new THREE.SpotLight(0xFFFFFF);
-    spotlight.position.set(0, 50, 0);
+    spotlight.position.set(0, 300, 0);
+    //spotlight.angle = 10;
     scene.add(spotlight);
 }
 
@@ -54,13 +55,14 @@ function init() {
             event.preventDefault();
             console.log("SPACEBAR");
             //TODO allow rotation of impulse
-            whiteBall.applyCentralImpulse(new THREE.Vector3(0.0001, 0, 0));
-            cueStick.material.opacity = 0;
-            cueStick.material.transparent = true;
+            const rotation = new THREE.Vector3(Math.cos(stick.rotation.y) / 10000, 0, -Math.sin(stick.rotation.y) / 10000);
+            whiteBall.applyCentralImpulse(rotation);
+            stick.material.opacity = 0;
+            stick.material.transparent = true;
         } else if (event.keyCode == 16) {
             event.preventDefault();
             console.log("SHIFT");
-            cueStick.material.transparent = false;
+            enableStick();
         }
     }, false);
 
@@ -68,12 +70,12 @@ function init() {
         if (event.keyCode == 68) {
             console.log("rotating right");
             event.preventDefault();
-            cueStick.rotation.z += Math.PI / 10;
+            stick.rotation.y += Math.PI / 10;
             return false;
         } else if (event.keyCode == 65) {
             console.log("rotating left");
             event.preventDefault();
-            cueStick.rotation.z -= Math.PI / 10;
+            stick.rotation.y -= Math.PI / 10;
             return false;
         }
     }, false)
@@ -215,23 +217,34 @@ function createStick() {
     const radiusTop = 0.01;
     const radiusBottom = 0.02;
     const height = 1;
-    const radialSegment = 32;
+    const length = 32;
 
-    const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegment);
+    const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, length);
     geometry.translate(0, -height / 2 - 0.02, 0);
-    cueStick = new THREE.Mesh(
+    stick = new THREE.Mesh(
         geometry,
         Physijs.createMaterial(new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }), 0, 1),
         0
     );
-    cueStick.rotation.x = Math.PI / 2 + Math.PI / 4;
-    cueStick.rotation.z = - Math.PI / 2;
-    cueStick.position.y = 0.98;
-    scene.add(cueStick);
+    if (!prod) {
+        const sphereAxis = new THREE.AxesHelper(20);
+        stick.add(sphereAxis);
+
+    }
+    //stick.rotation.x = Math.PI / 2 + Math.PI / 4;
+    stick.rotation.z = - Math.PI / 2 - Math.PI / 20;
+    stick.position.y = 0.98;
+    scene.add(stick);
 }
 function placeCueStickOnWhiteBall() {
-    cueStick.position.x = whiteBall.position.x;
-    cueStick.position.z = whiteBall.position.z;
+    stick.position.x = whiteBall.position.x;
+    stick.position.z = whiteBall.position.z;
+}
+
+function enableStick() {
+    placeCueStickOnWhiteBall();
+    stick.material.opacity = 100;
+    stick.material.transparent = false;
 }
 
 function renderFrame() {
@@ -240,6 +253,7 @@ function renderFrame() {
     if (whiteBall.position.y < 0.9) {
         scene.remove(whiteBall);
         whiteBall = createBall(whiteBallX, 0, 0);
+        enableStick()
     }
     otherBalls.forEach(b => {
         if (b.position.y < 0.9 && !b.removed) {
