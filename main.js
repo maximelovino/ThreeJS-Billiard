@@ -7,7 +7,10 @@ let whiteBall;
 let whiteBallX = -0.75;
 let otherBalls = [];
 let stick;
+const rotationStep = Math.PI / 40;
 const prod = true;
+//TODO better textures for ball and stick
+//TODO adjust friction and bounciness
 
 window.addEventListener('load', () => {
     Physijs.scripts.worker = 'lib/physijs_worker.js';
@@ -51,10 +54,9 @@ function init() {
     createStick();
     initLights();
     window.addEventListener("keyup", event => {
-        if (event.keyCode == 32) {
+        if (event.keyCode == 32 && !stick.material.transparent) {
             event.preventDefault();
             console.log("SPACEBAR");
-            //TODO allow rotation of impulse
             const rotation = new THREE.Vector3(Math.cos(stick.rotation.y) / 10000, 0, -Math.sin(stick.rotation.y) / 10000);
             whiteBall.applyCentralImpulse(rotation);
             stick.material.opacity = 0;
@@ -67,15 +69,16 @@ function init() {
     }, false);
 
     window.addEventListener("keydown", event => {
+        //TODO smaller rotation
         if (event.keyCode == 68) {
             console.log("rotating right");
             event.preventDefault();
-            stick.rotation.y += Math.PI / 10;
+            stick.rotation.y += rotationStep;
             return false;
         } else if (event.keyCode == 65) {
             console.log("rotating left");
             event.preventDefault();
-            stick.rotation.y -= Math.PI / 10;
+            stick.rotation.y -= rotationStep;
             return false;
         }
     }, false)
@@ -192,7 +195,7 @@ function createBall(x, z, number) {
     let height = 32;
     let ball = new Physijs.SphereMesh(
         new THREE.SphereGeometry(radius, width, height),
-        Physijs.createMaterial(new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide }), 0.5, 1),
+        Physijs.createMaterial(new THREE.MeshPhongMaterial({ color: color, side: THREE.DoubleSide }), 0.5, 1),
     );
     ball.position.set(x, 1, z);
     scene.add(ball);
@@ -223,7 +226,7 @@ function createStick() {
     geometry.translate(0, -height / 2 - 0.02, 0);
     stick = new THREE.Mesh(
         geometry,
-        Physijs.createMaterial(new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }), 0, 1),
+        Physijs.createMaterial(new THREE.MeshPhongMaterial({ color: 0xA95200, side: THREE.DoubleSide }), 0, 1),
         0
     );
     if (!prod) {
@@ -231,7 +234,6 @@ function createStick() {
         stick.add(sphereAxis);
 
     }
-    //stick.rotation.x = Math.PI / 2 + Math.PI / 4;
     stick.rotation.z = - Math.PI / 2 - Math.PI / 20;
     stick.position.y = 0.98;
     scene.add(stick);
