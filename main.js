@@ -6,7 +6,8 @@ let orbitcont;
 let whiteBall;
 let whiteBallX = -0.75;
 let otherBalls = [];
-const prod = false;
+let cueStick;
+const prod = true;
 
 window.addEventListener('load', () => {
     Physijs.scripts.worker = 'lib/physijs_worker.js';
@@ -36,13 +37,7 @@ function init() {
     loadTable();
 
     whiteBall = createBall(whiteBallX, 0, 0);
-    window.addEventListener("keyup", event => {
-        if (event.keyCode == 32) {
-            event.preventDefault();
-            console.log("SPACEBAR");
-            whiteBall.applyCentralImpulse(new THREE.Vector3(0.0001, 0, 0))
-        }
-    });
+
     let ballNumber = 1
     for (let i = 0; i < 5; i++) {
         for (let j = 0; j < 5; j++) {
@@ -52,7 +47,36 @@ function init() {
             }
         }
     }
+    createStick();
     initLights();
+    window.addEventListener("keyup", event => {
+        if (event.keyCode == 32) {
+            event.preventDefault();
+            console.log("SPACEBAR");
+            //TODO allow rotation of impulse
+            whiteBall.applyCentralImpulse(new THREE.Vector3(0.0001, 0, 0));
+            cueStick.material.opacity = 0;
+            cueStick.material.transparent = true;
+        } else if (event.keyCode == 16) {
+            event.preventDefault();
+            console.log("SHIFT");
+            cueStick.material.transparent = false;
+        }
+    }, false);
+
+    window.addEventListener("keydown", event => {
+        if (event.keyCode == 68) {
+            console.log("rotating right");
+            event.preventDefault();
+            cueStick.rotation.z += Math.PI / 10;
+            return false;
+        } else if (event.keyCode == 65) {
+            console.log("rotating left");
+            event.preventDefault();
+            cueStick.rotation.z -= Math.PI / 10;
+            return false;
+        }
+    }, false)
 }
 
 function loadTable() {
@@ -125,9 +149,7 @@ function loadTable() {
 }
 
 function createBall(x, z, number) {
-
     let color = 0xffffff;
-
     switch (number) {
         case 1:
         case 9:
@@ -189,6 +211,29 @@ function createRenderer() {
     document.body.appendChild(renderer.domElement);
 }
 
+function createStick() {
+    const radiusTop = 0.01;
+    const radiusBottom = 0.02;
+    const height = 1;
+    const radialSegment = 32;
+
+    const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegment);
+    geometry.translate(0, -height / 2 - 0.02, 0);
+    cueStick = new THREE.Mesh(
+        geometry,
+        Physijs.createMaterial(new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }), 0, 1),
+        0
+    );
+    cueStick.rotation.x = Math.PI / 2 + Math.PI / 4;
+    cueStick.rotation.z = - Math.PI / 2;
+    cueStick.position.y = 0.98;
+    scene.add(cueStick);
+}
+function placeCueStickOnWhiteBall() {
+    cueStick.position.x = whiteBall.position.x;
+    cueStick.position.z = whiteBall.position.z;
+}
+
 function renderFrame() {
 
     requestAnimationFrame(renderFrame);
@@ -202,6 +247,7 @@ function renderFrame() {
             scene.remove(b);
         }
     });
+    placeCueStickOnWhiteBall();
     orbitcont.update();
     scene.simulate();
     renderer.render(scene, camera);
