@@ -1,7 +1,6 @@
 let camera;
 let scene;
 let renderer;
-let materialLoader;
 let orbitcont;
 let whiteBall;
 let whiteBallX = -0.75;
@@ -33,18 +32,12 @@ function initLights() {
     scene.add(spotlight);
 }
 
-function init() {
+function initScene() {
     scene = new Physijs.Scene();
     scene.setGravity(0, -10, 0);
-    materialLoader = new THREE.MTLLoader();
+}
 
-    initCam();
-    createRenderer();
-    loadTable();
-
-    createAllBalls();
-    createStick();
-    initLights();
+function initAllListeners() {
     window.addEventListener("keyup", event => {
         if (event.keyCode == 32 && !stick.material.transparent) {
             event.preventDefault();
@@ -73,9 +66,21 @@ function init() {
     })
 }
 
+function init() {
+
+    initScene()
+    initCam();
+    createRenderer();
+    loadTable();
+
+    createAllBalls();
+    createStick();
+    initLights();
+    initAllListeners();
+}
+
 function createAllBalls() {
     whiteBall = createBall(whiteBallX, 0, 0);
-
     let ballNumber = 1
     for (let i = 0; i < 5; i++) {
         for (let j = 0; j < 5; j++) {
@@ -88,6 +93,7 @@ function createAllBalls() {
 }
 
 function loadTable() {
+    const materialLoader = new THREE.MTLLoader();
     materialLoader.setPath('objs/');
     materialLoader.load('pool_table.mtl', (materials) => {
         materials.preload();
@@ -104,23 +110,24 @@ function loadTable() {
             scene.add(object);
         })
     });
+
     const width = 2.25;
     const height = 0.1;
     const depth = 1.2;
 
-    const tableBase = new Physijs.BoxMesh(
+    //Table surface
+    const tableSurface = new Physijs.BoxMesh(
         new THREE.BoxGeometry(width, height, depth),
         Physijs.createMaterial(new THREE.MeshBasicMaterial({
             color: 0x005500,
             side: THREE.DoubleSide,
             transparent: prod,
             opacity: 0
-        }), tableFriction, tableBounciness),
-        0
-    );
-    tableBase.position.set(0, 0.90, 0);
-    scene.add(tableBase);
+        }), tableFriction, tableBounciness), 0);
+    tableSurface.position.set(0, 0.90, 0);
+    scene.add(tableSurface);
 
+    //Big sides border
     for (let i = -1; i <= 1; i += 2) {
         for (let j = -1; j <= 1; j += 2) {
             let border = new Physijs.BoxMesh(
@@ -130,15 +137,13 @@ function loadTable() {
                     side: THREE.DoubleSide,
                     transparent: prod,
                     opacity: 0
-                }), borderFriction, borderBounciness),
-                0
-            );
+                }), borderFriction, borderBounciness), 0);
 
             border.position.set(i * width / 4 + (i == -1 ? 0.02 : -0.02), 0.95, j * depth / 2 + (j == 1 ? 0.02 : -0.02));
             scene.add(border);
         }
     }
-
+    //Small sides border
     for (let i = -1; i <= 1; i += 2) {
         let border = new Physijs.BoxMesh(
             new THREE.BoxGeometry(height, 0.3, width / 2 - width / 11),
@@ -185,12 +190,10 @@ function colorForBall(number) {
 
 function createBall(x, z, number) {
     let color = colorForBall(number);
-
-    console.log({ number, color });
-    let radius = 0.02;
-    let width = 32;
-    let height = 32;
-    let ball = new Physijs.SphereMesh(
+    const radius = 0.02;
+    const width = 32;
+    const height = 32;
+    const ball = new Physijs.SphereMesh(
         new THREE.SphereGeometry(radius, width, height),
         Physijs.createMaterial(new THREE.MeshPhongMaterial({
             color: color,
@@ -229,14 +232,13 @@ function createStick() {
         Physijs.createMaterial(new THREE.MeshPhongMaterial({
             color: 0xA95200,
             side: THREE.DoubleSide
-        }), 0, 1),
-        0
-    );
+        }), 0, 1), 0);
+
     if (!prod) {
         const sphereAxis = new THREE.AxesHelper(20);
         stick.add(sphereAxis);
-
     }
+
     stick.rotation.z = - Math.PI / 2 - Math.PI / 20;
     stick.position.y = 0.98;
     scene.add(stick);
@@ -252,8 +254,7 @@ function enableStick() {
     stick.material.transparent = false;
 }
 
-function renderFrame() {
-    requestAnimationFrame(renderFrame);
+function checkAllBalls() {
     if (whiteBall.position.y < 0.9) {
         scene.remove(whiteBall);
         whiteBall = createBall(whiteBallX, 0, 0);
@@ -267,6 +268,11 @@ function renderFrame() {
             points++;
         }
     });
+}
+
+function renderFrame() {
+    requestAnimationFrame(renderFrame);
+    checkAllBalls();
     infoDiv.innerHTML = `Points: ${points}`;
     placeCueStickOnWhiteBall();
     orbitcont.update();
