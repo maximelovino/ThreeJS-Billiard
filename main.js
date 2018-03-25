@@ -7,27 +7,29 @@ let whiteBall;
 let whiteBallX = -0.75;
 let otherBalls = [];
 let stick;
+let points = 0;
 const rotationStep = Math.PI / 40;
 const prod = true;
-//TODO better textures for ball and stick
-//TODO adjust friction and bounciness
+let infoDiv;
+
+const ballFriction = 0.9;
+const ballBounciness = 0.7;
+const borderBounciness = 0.4;
+const borderFriction = 0.2;
+const tableFriction = 1;
+const tableBounciness = 0;
 
 window.addEventListener('load', () => {
     Physijs.scripts.worker = 'lib/physijs_worker.js';
     Physijs.scripts.ammo = './ammo.js';
+    infoDiv = document.querySelector('#info');
     init();
     renderFrame();
 });
 
-function Position(x, y) {
-    return { x, y }
-}
-
-
 function initLights() {
     const spotlight = new THREE.SpotLight(0xFFFFFF);
     spotlight.position.set(0, 300, 0);
-    //spotlight.angle = 10;
     scene.add(spotlight);
 }
 
@@ -40,6 +42,38 @@ function init() {
     createRenderer();
     loadTable();
 
+    createAllBalls();
+    createStick();
+    initLights();
+    window.addEventListener("keyup", event => {
+        if (event.keyCode == 32 && !stick.material.transparent) {
+            event.preventDefault();
+            console.log("SPACEBAR");
+            const ballForce = new THREE.Vector3(Math.cos(stick.rotation.y) / 10000, 0, -Math.sin(stick.rotation.y) / 10000);
+            whiteBall.applyCentralImpulse(ballForce);
+            stick.material.opacity = 0;
+            stick.material.transparent = true;
+        } else if (event.keyCode == 16) { //shift to enable the stick
+            event.preventDefault();
+            console.log("SHIFT");
+            enableStick();
+        }
+    });
+
+    window.addEventListener("keydown", event => {
+        if (event.keyCode == 68) { //d key
+            console.log("rotating right");
+            event.preventDefault();
+            stick.rotation.y += rotationStep;
+        } else if (event.keyCode == 65) { //a key
+            console.log("rotating left");
+            event.preventDefault();
+            stick.rotation.y -= rotationStep;
+        }
+    })
+}
+
+function createAllBalls() {
     whiteBall = createBall(whiteBallX, 0, 0);
 
     let ballNumber = 1
@@ -51,37 +85,6 @@ function init() {
             }
         }
     }
-    createStick();
-    initLights();
-    window.addEventListener("keyup", event => {
-        if (event.keyCode == 32 && !stick.material.transparent) {
-            event.preventDefault();
-            console.log("SPACEBAR");
-            const rotation = new THREE.Vector3(Math.cos(stick.rotation.y) / 10000, 0, -Math.sin(stick.rotation.y) / 10000);
-            whiteBall.applyCentralImpulse(rotation);
-            stick.material.opacity = 0;
-            stick.material.transparent = true;
-        } else if (event.keyCode == 16) {
-            event.preventDefault();
-            console.log("SHIFT");
-            enableStick();
-        }
-    }, false);
-
-    window.addEventListener("keydown", event => {
-        //TODO smaller rotation
-        if (event.keyCode == 68) {
-            console.log("rotating right");
-            event.preventDefault();
-            stick.rotation.y += rotationStep;
-            return false;
-        } else if (event.keyCode == 65) {
-            console.log("rotating left");
-            event.preventDefault();
-            stick.rotation.y -= rotationStep;
-            return false;
-        }
-    }, false)
 }
 
 function loadTable() {
@@ -104,8 +107,7 @@ function loadTable() {
     const width = 2.25;
     const height = 0.1;
     const depth = 1.2;
-    const bounciness = 0.5
-    const friction = 0.5
+
     const tableBase = new Physijs.BoxMesh(
         new THREE.BoxGeometry(width, height, depth),
         Physijs.createMaterial(new THREE.MeshBasicMaterial({
@@ -113,7 +115,7 @@ function loadTable() {
             side: THREE.DoubleSide,
             transparent: prod,
             opacity: 0
-        }), friction, 0),
+        }), tableFriction, tableBounciness),
         0
     );
     tableBase.position.set(0, 0.90, 0);
@@ -128,7 +130,7 @@ function loadTable() {
                     side: THREE.DoubleSide,
                     transparent: prod,
                     opacity: 0
-                }), friction * 2, bounciness),
+                }), borderFriction, borderBounciness),
                 0
             );
 
@@ -145,57 +147,55 @@ function loadTable() {
                 side: THREE.DoubleSide,
                 transparent: prod,
                 opacity: 0
-            }), friction, bounciness),
-            0
-        );
+            }), borderFriction, borderBounciness), 0);
         border.position.set(i * width / 2 + (i == -1 ? -0.04 : 0.04), 0.95, 0);
         scene.add(border);
     }
 }
 
-function createBall(x, z, number) {
-    let color = 0xffffff;
+function colorForBall(number) {
     switch (number) {
         case 1:
         case 9:
-            color = 0xEEF200; //yellow
-            break;
+            return 0xEEF200; //yellow
         case 2:
         case 10:
-            color = 0x0000ff; //blue
-            break;
+            return 0x0000ff; //blue
         case 3:
         case 11:
-            color = 0xff0000; //red
-            break;
+            return 0xff0000; //red
         case 4:
         case 12:
-            color = 0x7900F2; //purple
-            break;
+            return 0x7900F2; //purple
         case 5:
         case 13:
-            color = 0xF2B700; //orange
-            break;
+            return 0xF2B700; //orange
         case 6:
         case 14:
-            color = 0x00ff00; //gren
-            break;
+            return 0x00ff00; //gren
         case 7:
         case 15:
-            color = 0x900C3F; //marroon
-            break;
+            return 0x900C3F; //marroon
         case 8:
-            color = 0x000000; //black
-            break;
-        default: break;
+            return 0x000000; //black
+        default:
+            return 0xffffff;
     }
+}
+
+function createBall(x, z, number) {
+    let color = colorForBall(number);
+
     console.log({ number, color });
     let radius = 0.02;
     let width = 32;
     let height = 32;
     let ball = new Physijs.SphereMesh(
         new THREE.SphereGeometry(radius, width, height),
-        Physijs.createMaterial(new THREE.MeshPhongMaterial({ color: color, side: THREE.DoubleSide }), 0.5, 1),
+        Physijs.createMaterial(new THREE.MeshPhongMaterial({
+            color: color,
+            side: THREE.DoubleSide
+        }), ballFriction, ballBounciness),
     );
     ball.position.set(x, 1, z);
     scene.add(ball);
@@ -217,16 +217,19 @@ function createRenderer() {
 }
 
 function createStick() {
-    const radiusTop = 0.01;
+    const radiusTop = 0.005;
     const radiusBottom = 0.02;
     const height = 1;
-    const length = 32;
+    const length = 30;
 
     const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, length);
     geometry.translate(0, -height / 2 - 0.02, 0);
     stick = new THREE.Mesh(
         geometry,
-        Physijs.createMaterial(new THREE.MeshPhongMaterial({ color: 0xA95200, side: THREE.DoubleSide }), 0, 1),
+        Physijs.createMaterial(new THREE.MeshPhongMaterial({
+            color: 0xA95200,
+            side: THREE.DoubleSide
+        }), 0, 1),
         0
     );
     if (!prod) {
@@ -250,22 +253,23 @@ function enableStick() {
 }
 
 function renderFrame() {
-
     requestAnimationFrame(renderFrame);
     if (whiteBall.position.y < 0.9) {
         scene.remove(whiteBall);
         whiteBall = createBall(whiteBallX, 0, 0);
         enableStick()
     }
+
     otherBalls.forEach(b => {
         if (b.position.y < 0.9 && !b.removed) {
             b.removed = true;
             scene.remove(b);
+            points++;
         }
     });
+    infoDiv.innerHTML = `Points: ${points}`;
     placeCueStickOnWhiteBall();
     orbitcont.update();
     scene.simulate();
     renderer.render(scene, camera);
-
 }
